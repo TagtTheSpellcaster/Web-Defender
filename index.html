@@ -84,8 +84,8 @@
             margin: 12px 0;
             background: rgba(0, 20, 30, 0.6);
             text-align: left;
-            max-width: 560px;
-            width: 90%;
+            max-width: 580px;
+            width: 92%;
         }
         .controls-grid {
             display: grid;
@@ -139,11 +139,11 @@
         <!-- Start Screen -->
         <div id="start-screen" class="overlay">
             <h1>WEB DEFENDER</h1>
-            <h2>VECTOR ARCADE</h2>
+            <h2>VECTOR 1981 ARCADE</h2>
             <div class="controls-box">
                 <p style="text-align:center; font-weight:bold; color:#ff00ff; margin-bottom:8px;">MISSION: PROTECT AND RESCUE THE HUMANOIDS</p>
                 <div class="controls-grid">
-                    <div><span class="key">W, S / Arrows</span> : Altitude / Up-Down</div>
+                    <div><span class="key">W, S / Arrows</span> : Altitude / Pitch</div>
                     <div><span class="key">Space / L-Click</span> : Laser Cannon</div>
                     <div><span class="key">A, D / Arrows</span> : Thrust & Direction</div>
                     <div><span class="key">E / R-Click</span> : Smart Bomb</div>
@@ -414,11 +414,9 @@
         });
 
         let terrainHeights = [];
-        let backgroundHeights = [];
 
         function generateTerrain() {
             terrainHeights = [];
-            backgroundHeights = [];
             const count = Math.ceil(WORLD_WIDTH / TERRAIN_STEP);
 
             for (let i = 0; i <= count; i++) {
@@ -426,11 +424,7 @@
                         + Math.cos(i * 0.22) * 45 
                         + Math.sin(i * 0.45) * 25 
                         + Math.cos(i * 0.9) * 12;
-                terrainHeights.push(Math.max(10, Math.min(170, h + 55)));
-
-                const bgH = Math.sin(i * 0.05 + 1.2) * 110 
-                          + Math.cos(i * 0.15) * 50;
-                backgroundHeights.push(Math.max(10, bgH + 70));
+                terrainHeights.push(Math.max(20, Math.min(180, h + 65)));
             }
         }
 
@@ -451,6 +445,20 @@
             return getGroundBaseY() - interpolatedH;
         }
 
+        // Extremely Jagged, Pointy, Non-Rounded Blue Background Mountain Formula
+        function getBgMountainY(worldX) {
+            let wx = (worldX % WORLD_WIDTH + WORLD_WIDTH) % WORLD_WIDTH;
+            
+            // Triangular / Absolute Harmonic Spikes for Sharp Jagged Peaks
+            const tri1 = Math.abs((wx % 240) - 120) * 1.8;
+            const tri2 = Math.abs((wx % 90) - 45) * 2.2;
+            const tri3 = Math.abs((wx % 450) - 225) * 0.9;
+            const spike = Math.abs(Math.sin(wx * 0.008)) * 90;
+
+            const totalPeak = tri1 + tri2 + tri3 + spike;
+            return getGroundBaseY() - 170 - totalPeak;
+        }
+
         let score = 0;
         let highScore = localStorage.getItem('defender_highscore') || 0;
         let lives = 3;
@@ -458,12 +466,28 @@
         let wave = 1;
         let cameraX = 0;
 
+        let stars = [];
         let particles = [];
         let lasers = [];
         let enemyLasers = [];
         let humanoids = [];
         let enemies = [];
         let floatingScores = [];
+
+        function generateStars() {
+            stars = [];
+            const count = 120;
+            for (let i = 0; i < count; i++) {
+                stars.push({
+                    x: Math.random() * WORLD_WIDTH,
+                    y: Math.random() * (height - 100),
+                    size: Math.random() * 1.5 + 0.5,
+                    color: Math.random() < 0.3 ? '#00ffff' : (Math.random() < 0.6 ? '#ff00ff' : '#ffffff'),
+                    alpha: Math.random() * 0.7 + 0.3,
+                    parallax: Math.random() * 0.12 + 0.03
+                });
+            }
+        }
 
         function createExplosion(x, y, color = '#00ffff', count = 28, speed = 6) {
             for (let i = 0; i < count; i++) {
@@ -490,6 +514,13 @@
                 life: 1.0,
                 vy: -1
             });
+        }
+
+        function getWrappedDx(fromX, toX) {
+            let dx = toX - fromX;
+            if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
+            if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+            return dx;
         }
 
         function getScreenX(worldX) {
@@ -543,13 +574,15 @@
                     } else {
                         this.kidnapper = null;
                         this.state = 'FALLING';
-                        this.vy = 0.5;
+                        this.vy = 0.2;
                     }
                 } else if (this.state === 'FALLING') {
-                    this.vy += 0.12;
+                    // Gentle floaty rescue gravity
+                    this.vy += 0.045;
+                    if (this.vy > 1.8) this.vy = 1.8;
                     this.y += this.vy;
 
-                    // Mid-air catch check
+                    // Mid-air catch check by player ship
                     const dx = Math.abs(getScreenX(this.x) - getScreenX(player.x));
                     const dy = Math.abs(this.y - player.y);
                     if (dx < 32 && dy < 28) {
@@ -557,7 +590,7 @@
                     }
 
                     if (this.y >= currentGroundY - HUMANOID_HEIGHT) {
-                        if (this.vy > 3.0) {
+                        if (this.vy > 1.6) {
                             createExplosion(this.x, this.y, '#ff0000', 25, 7);
                             sfx.humanoidScream();
                             this.destroy();
@@ -566,8 +599,6 @@
                             this.state = 'GROUND';
                             this.vy = 0;
                             this.wasScoredForPickup = false;
-                            score += 250;
-                            addFloatingScore(this.x, this.y, 250);
                         }
                     }
                 } else if (this.state === 'CARRIED') {
@@ -621,15 +652,18 @@
                 ctx.strokeStyle = '#00ff55';
                 ctx.lineWidth = 1.5;
 
+                ctx.translate(sx, this.y);
+
                 ctx.beginPath();
-                ctx.arc(sx, this.y - 10, 2.5, 0, Math.PI * 2);
-                ctx.moveTo(sx, this.y - 7.5);
-                ctx.lineTo(sx, this.y - 3);
-                ctx.lineTo(sx - 3, this.y);
-                ctx.moveTo(sx, this.y - 3);
-                ctx.lineTo(sx + 3, this.y);
-                ctx.moveTo(sx - 3.5, this.y - 6);
-                ctx.lineTo(sx + 3.5, this.y - 6);
+                // Head
+                ctx.arc(0, -7, 2.5, 0, Math.PI * 2);
+                // Body
+                ctx.moveTo(0, -4.5); ctx.lineTo(0, 3);
+                // Arms
+                ctx.moveTo(-4, -2); ctx.lineTo(4, -2);
+                // Legs
+                ctx.moveTo(0, 3); ctx.lineTo(-3, 8);
+                ctx.moveTo(0, 3); ctx.lineTo(3, 8);
                 ctx.stroke();
 
                 ctx.restore();
@@ -661,7 +695,7 @@
                 humanoids.forEach(h => {
                     if (h.state === 'CARRIED') {
                         h.state = 'FALLING';
-                        h.vy = 0.5;
+                        h.vy = 0.2;
                         h.wasScoredForPickup = false;
                     }
                 });
@@ -751,10 +785,10 @@
                 if (this.invulnerable > 0 && Math.floor(this.invulnerable / 4) % 2 === 0) return;
 
                 ctx.save();
-                ctx.shadowBlur = 12;
+                ctx.shadowBlur = 14;
                 ctx.shadowColor = '#00ffff';
                 ctx.strokeStyle = '#00ffff';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 1.8;
 
                 const rx = getScreenX(this.x);
                 const ry = this.y;
@@ -764,30 +798,57 @@
                     ctx.scale(-1, 1);
                 }
 
+                // Sleek Vector Defender Ship
                 ctx.beginPath();
-                ctx.moveTo(18, 0);
-                ctx.lineTo(-12, -9);
-                ctx.lineTo(-6, -3);
-                ctx.lineTo(-16, -3);
-                ctx.lineTo(-18, 0);
-                ctx.lineTo(-16, 3);
-                ctx.lineTo(-6, 3);
-                ctx.lineTo(-12, 9);
+                ctx.moveTo(22, 0);
+                ctx.lineTo(8, -4);
+                ctx.lineTo(2, -7);
+                ctx.lineTo(-10, -12);
+                ctx.lineTo(-6, -4);
+                ctx.lineTo(-18, -4);
+                ctx.lineTo(-20, 0);
+                ctx.lineTo(-18, 4);
+                ctx.lineTo(-6, 4);
+                ctx.lineTo(-10, 12);
+                ctx.lineTo(2, 7);
+                ctx.lineTo(8, 4);
                 ctx.closePath();
                 ctx.stroke();
 
+                // Inner Canopy & Fuselage Detail
                 ctx.beginPath();
-                ctx.moveTo(8, -2);
-                ctx.lineTo(0, -4);
-                ctx.lineTo(-4, 0);
+                ctx.strokeStyle = '#ffffff';
+                ctx.shadowColor = '#ffffff';
+                ctx.moveTo(12, -2);
+                ctx.lineTo(2, -4);
+                ctx.lineTo(-4, -1);
+                ctx.lineTo(-4, 1);
+                ctx.lineTo(2, 4);
+                ctx.lineTo(12, 2);
+                ctx.closePath();
                 ctx.stroke();
 
-                if (this.thrusting) {
+                // Side Winglet Accents
+                ctx.beginPath();
+                ctx.strokeStyle = '#ff00ff';
+                ctx.shadowColor = '#ff00ff';
+                ctx.moveTo(-2, -6); ctx.lineTo(-12, -10);
+                ctx.moveTo(-2, 6); ctx.lineTo(-12, 10);
+                ctx.stroke();
+
+                // Animated Thrust Flame Plume
+                if (this.thrusting || Math.abs(this.vx) > 2) {
+                    const thrustLen = 12 + Math.random() * 14;
                     ctx.strokeStyle = '#ff0055';
                     ctx.shadowColor = '#ff0055';
+                    ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.moveTo(-18, 0);
-                    ctx.lineTo(-26 - Math.random() * 10, (Math.random() - 0.5) * 6);
+                    ctx.moveTo(-20, 0);
+                    ctx.lineTo(-20 - thrustLen, (Math.random() - 0.5) * 8);
+                    ctx.moveTo(-18, -3);
+                    ctx.lineTo(-18 - thrustLen * 0.7, -2);
+                    ctx.moveTo(-18, 3);
+                    ctx.lineTo(-18 - thrustLen * 0.7, 2);
                     ctx.stroke();
                 }
 
@@ -801,11 +862,12 @@
             constructor(type, x, y) {
                 this.type = type;
                 this.x = x || Math.random() * WORLD_WIDTH;
-                this.y = y || radarHeight + 40 + Math.random() * (height - radarHeight - 160);
+                this.y = y || radarHeight + 30 + Math.random() * 80;
                 this.vx = (Math.random() - 0.5) * 3;
                 this.vy = (Math.random() - 0.5) * 2;
                 this.targetHumanoid = null;
                 this.fireTimer = Math.floor(Math.random() * 80);
+                this.patrolTimer = 300;
                 this.destroyed = false;
 
                 if (type === 'LANDER') {
@@ -839,19 +901,13 @@
                 this.fireTimer++;
 
                 if (this.type === 'LANDER') {
-                    // Helper function for shortest distance across wrapping world boundary
-                    const getWrappedDx = (fromX, toX) => {
-                        let dx = toX - fromX;
-                        if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
-                        if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
-                        return dx;
-                    };
+                    if (this.patrolTimer > 0) {
+                        this.patrolTimer--;
+                    }
 
-                    // Find a valid target humanoid on the ground if not already targeting one
-                    if (!this.targetHumanoid || this.targetHumanoid.markedForDeletion || this.targetHumanoid.state !== 'GROUND') {
+                    if (this.patrolTimer <= 0 && (!this.targetHumanoid || this.targetHumanoid.markedForDeletion || this.targetHumanoid.state !== 'GROUND')) {
                         const groundHumanoids = humanoids.filter(h => !h.markedForDeletion && h.state === 'GROUND');
                         if (groundHumanoids.length > 0) {
-                            // Pick closest ground humanoid taking wrapping world into account
                             groundHumanoids.sort((a, b) => Math.abs(getWrappedDx(this.x, a.x)) - Math.abs(getWrappedDx(this.x, b.x)));
                             this.targetHumanoid = groundHumanoids[0];
                         } else {
@@ -861,25 +917,21 @@
 
                     if (this.targetHumanoid && this.targetHumanoid.state === 'GROUND') {
                         const dx = getWrappedDx(this.x, this.targetHumanoid.x);
-                        if (Math.abs(dx) > 8) {
-                            // Fly horizontally toward humanoid
+                        if (Math.abs(dx) > 12) {
                             this.vx = Math.sign(dx) * this.speed;
-                            this.vy = (this.targetHumanoid.y - 20 - this.y) * 0.05;
+                            this.vy = (this.targetHumanoid.y - 120 - this.y) * 0.05;
                         } else {
-                            // Hover over and descend directly onto humanoid
                             this.vx = 0;
                             this.vy = 2.2;
-                            if (this.y >= this.targetHumanoid.y - 10) {
+                            if (this.y >= this.targetHumanoid.y - 12) {
                                 this.targetHumanoid.state = 'KIDNAPPED';
                                 this.targetHumanoid.kidnapper = this;
                             }
                         }
                     } else if (this.targetHumanoid && this.targetHumanoid.state === 'KIDNAPPED') {
-                        // Ascend with kidnapped humanoid to top edge of screen
                         this.vx = 0;
                         this.vy = -1.8;
                         if (this.y <= radarHeight + 22) {
-                            // Mutate Lander into red Mutant upon reaching top edge
                             this.type = 'MUTANT';
                             this.color = '#ff0000';
                             this.speed = 4.8;
@@ -889,7 +941,6 @@
                             }
                         }
                     } else {
-                        // Active patrol behavior if no humanoids are on the ground
                         if (Math.abs(this.vx) < 0.5) this.vx = (Math.random() < 0.5 ? 1 : -1) * this.speed;
                         this.vy = Math.sin(Date.now() * 0.004 + this.x) * 1.5;
                     }
@@ -902,9 +953,7 @@
                     }
 
                 } else if (this.type === 'MUTANT' || this.type === 'BAITER') {
-                    let dx = player.x - this.x;
-                    if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
-                    if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+                    let dx = getWrappedDx(this.x, player.x);
                     let dy = player.y - this.y;
                     let dist = Math.hypot(dx, dy) || 1;
 
@@ -939,9 +988,7 @@
                     this.y += this.vy;
 
                 } else if (this.type === 'SWARMER') {
-                    let dx = player.x - this.x;
-                    if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
-                    if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+                    let dx = getWrappedDx(this.x, player.x);
                     let dy = player.y - this.y;
 
                     this.x += Math.sign(dx) * (this.speed + Math.random() * 2);
@@ -960,9 +1007,7 @@
 
             fireAtPlayer() {
                 this.fireTimer = 0;
-                let dx = player.x - this.x;
-                if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
-                if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+                let dx = getWrappedDx(this.x, player.x);
                 let dy = player.y - this.y;
                 let dist = Math.hypot(dx, dy) || 1;
                 let spd = 6;
@@ -991,12 +1036,35 @@
 
                 if (this.type === 'LANDER') {
                     ctx.beginPath();
-                    ctx.strokeRect(-8, -8, 16, 16);
-                    ctx.moveTo(-8, -8); ctx.lineTo(-12, -12);
-                    ctx.moveTo(8, -8); ctx.lineTo(12, -12);
-                    ctx.moveTo(-8, 8); ctx.lineTo(-12, 12);
-                    ctx.moveTo(8, 8); ctx.lineTo(12, 12);
+                    // Central Canopy
+                    ctx.arc(0, -3, 4, Math.PI, 0);
+                    // Hull Core
+                    ctx.moveTo(-6, -3); ctx.lineTo(6, -3);
+                    ctx.lineTo(8, 2); ctx.lineTo(-8, 2); ctx.closePath();
+                    // Swept Wings
+                    ctx.moveTo(-8, 0); ctx.lineTo(-14, -5); ctx.lineTo(-10, 5); ctx.lineTo(-6, 2);
+                    ctx.moveTo(8, 0); ctx.lineTo(14, -5); ctx.lineTo(10, 5); ctx.lineTo(6, 2);
+                    // Rear Thrusters
+                    ctx.moveTo(-4, 2); ctx.lineTo(-4, 6);
+                    ctx.moveTo(4, 2); ctx.lineTo(4, 6);
+                    // Abduction Tractor Prongs
+                    ctx.moveTo(-6, 2); ctx.lineTo(-9, 10); ctx.lineTo(-4, 8);
+                    ctx.moveTo(6, 2); ctx.lineTo(9, 10); ctx.lineTo(4, 8);
                     ctx.stroke();
+
+                    if (this.targetHumanoid) {
+                        ctx.save();
+                        ctx.strokeStyle = '#00ff55';
+                        ctx.shadowColor = '#00ff55';
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([3, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(-5, 8); ctx.lineTo(-8, 24);
+                        ctx.moveTo(5, 8); ctx.lineTo(8, 24);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
                 } else if (this.type === 'MUTANT') {
                     ctx.beginPath();
                     ctx.moveTo(0, -10);
@@ -1111,6 +1179,7 @@
             enemyLasers = [];
             humanoids = [];
 
+            generateStars();
             generateTerrain();
 
             for (let i = 0; i < 10; i++) {
@@ -1294,43 +1363,65 @@
             ctx.restore();
         }
 
-        function drawBackgroundTerrain() {
+        function drawTerrain() {
             ctx.save();
-            ctx.shadowBlur = 4;
-            ctx.shadowColor = '#003366';
-            ctx.strokeStyle = '#003366';
-            ctx.lineWidth = 1.5;
+
+            // 0. Parallax Starfield Layer
+            stars.forEach(star => {
+                const sx = ((star.x - cameraX * star.parallax + WORLD_WIDTH * 10) % width);
+                ctx.save();
+                ctx.globalAlpha = star.alpha;
+                ctx.fillStyle = star.color;
+                ctx.shadowBlur = star.size > 1 ? 4 : 0;
+                ctx.shadowColor = star.color;
+                ctx.fillRect(sx, star.y, star.size, star.size);
+                ctx.restore();
+            });
+
+            // 1. Jagged Distant Cyan/Blue Background Mountain Layer (Slower Parallax Factor: 0.2)
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#0088cc';
+            ctx.strokeStyle = '#0088cc';
+            ctx.lineWidth = 1.6;
             ctx.beginPath();
 
-            const startI = Math.floor((cameraX - width / 2 - 200) / TERRAIN_STEP);
-            const endI = Math.ceil((cameraX + width / 2 + 200) / TERRAIN_STEP);
+            // Render background layer with fixed world sampling steps to completely eliminate pixel jitter/wiggling
+            const bgParallaxFactor = 0.2;
+            const bgCameraX = cameraX * bgParallaxFactor;
+            const step = TERRAIN_STEP;
+            const startI = Math.floor((bgCameraX - width / 2 - 200) / step);
+            const endI = Math.ceil((bgCameraX + width / 2 + 200) / step);
 
-            let first = true;
+            let firstBg = true;
             for (let i = startI; i <= endI; i++) {
-                const wx = i * TERRAIN_STEP;
-                const sx = getScreenX(wx);
-                const idx = (i % backgroundHeights.length + backgroundHeights.length) % backgroundHeights.length;
-                const sy = getGroundBaseY() - backgroundHeights[idx];
+                const wx = i * step;
+                let dx = wx - bgCameraX;
+                if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
+                if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+                const sx = width / 2 + dx;
+                const sy = getBgMountainY(wx);
 
-                if (first) {
+                if (firstBg) {
                     ctx.moveTo(sx, sy);
-                    first = false;
+                    firstBg = false;
                 } else {
                     ctx.lineTo(sx, sy);
                 }
             }
             ctx.stroke();
-            ctx.restore();
 
-            ctx.save();
+            // 2. Primary Foreground Magenta Terrain Surface
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#ff00aa';
             ctx.strokeStyle = '#ff00aa';
             ctx.lineWidth = 2;
             ctx.beginPath();
 
-            first = true;
-            for (let i = startI; i <= endI; i++) {
+            const startI_fg = Math.floor((cameraX - width / 2 - 200) / TERRAIN_STEP);
+            const endI_fg = Math.ceil((cameraX + width / 2 + 200) / TERRAIN_STEP);
+
+            let first = true;
+            for (let i = startI_fg; i <= endI_fg; i++) {
                 const wx = i * TERRAIN_STEP;
                 const sx = getScreenX(wx);
                 const sy = getTerrainY(wx);
@@ -1379,7 +1470,7 @@
             ctx.fillStyle = '#000004';
             ctx.fillRect(0, 0, width, height);
 
-            drawBackgroundTerrain();
+            drawTerrain();
 
             humanoids.forEach(h => h.draw());
             enemies.forEach(e => e.draw());
