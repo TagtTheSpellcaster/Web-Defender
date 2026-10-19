@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>WEB DEFENDER - Vector Edition</title>
+    <title>DEFENDER 1981 - Vector Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -138,7 +138,7 @@
 
         <!-- Start Screen -->
         <div id="start-screen" class="overlay">
-            <h1>WEB DEFENDER</h1>
+            <h1>DEFENDER</h1>
             <h2>VECTOR 1981 ARCADE</h2>
             <div class="controls-box">
                 <p style="text-align:center; font-weight:bold; color:#ff00ff; margin-bottom:8px;">MISSION: PROTECT AND RESCUE THE HUMANOIDS</p>
@@ -445,18 +445,18 @@
             return getGroundBaseY() - interpolatedH;
         }
 
-        // Extremely Jagged, Pointy, Non-Rounded Blue Background Mountain Formula
         function getBgMountainY(worldX) {
             let wx = (worldX % WORLD_WIDTH + WORLD_WIDTH) % WORLD_WIDTH;
             
-            // Triangular / Absolute Harmonic Spikes for Sharp Jagged Peaks
-            const tri1 = Math.abs((wx % 240) - 120) * 1.8;
-            const tri2 = Math.abs((wx % 90) - 45) * 2.2;
-            const tri3 = Math.abs((wx % 450) - 225) * 0.9;
-            const spike = Math.abs(Math.sin(wx * 0.008)) * 90;
+            const tri1 = Math.abs((wx % 240) - 120) * 0.85;
+            const tri2 = Math.abs((wx % 90) - 45) * 1.1;
+            const tri3 = Math.abs((wx % 450) - 225) * 0.45;
+            const spike = Math.abs(Math.sin(wx * 0.008)) * 40;
 
             const totalPeak = tri1 + tri2 + tri3 + spike;
-            return getGroundBaseY() - 170 - totalPeak;
+            const minY = radarHeight + 12;
+            const calculatedY = getGroundBaseY() - 120 - totalPeak;
+            return Math.max(minY, calculatedY);
         }
 
         let score = 0;
@@ -539,7 +539,7 @@
             constructor(x) {
                 this.x = x;
                 this.y = getTerrainY(x) - HUMANOID_HEIGHT;
-                this.state = 'GROUND'; // GROUND, KIDNAPPED, FALLING, CARRIED
+                this.state = 'GROUND';
                 this.kidnapper = null;
                 this.vy = 0;
                 this.walkDir = Math.random() < 0.5 ? 1 : -1;
@@ -577,12 +577,10 @@
                         this.vy = 0.2;
                     }
                 } else if (this.state === 'FALLING') {
-                    // Gentle floaty rescue gravity
                     this.vy += 0.045;
                     if (this.vy > 1.8) this.vy = 1.8;
                     this.y += this.vy;
 
-                    // Mid-air catch check by player ship
                     const dx = Math.abs(getScreenX(this.x) - getScreenX(player.x));
                     const dy = Math.abs(this.y - player.y);
                     if (dx < 32 && dy < 28) {
@@ -605,7 +603,6 @@
                     this.x = player.x;
                     this.y = player.y + 14 + (this.stackIndex * 10);
 
-                    // Landing on terrain
                     if (this.landingCooldown <= 0 && player.y >= currentGroundY - 36) {
                         this.state = 'GROUND';
                         this.x = player.x;
@@ -655,13 +652,9 @@
                 ctx.translate(sx, this.y);
 
                 ctx.beginPath();
-                // Head
                 ctx.arc(0, -7, 2.5, 0, Math.PI * 2);
-                // Body
                 ctx.moveTo(0, -4.5); ctx.lineTo(0, 3);
-                // Arms
                 ctx.moveTo(-4, -2); ctx.lineTo(4, -2);
-                // Legs
                 ctx.moveTo(0, 3); ctx.lineTo(-3, 8);
                 ctx.moveTo(0, 3); ctx.lineTo(3, 8);
                 ctx.stroke();
@@ -746,19 +739,15 @@
 
                 const minY = radarHeight + 16;
                 const groundY = getTerrainY(this.x);
-                const maxY = groundY - 14;
+                const maxY = groundY - 10;
 
                 if (this.y < minY) {
                     this.y = minY;
                     this.vy = 0;
                 }
                 if (this.y > maxY) {
-                    if (Math.abs(this.vy) > 4.5 || Math.abs(this.vx) > 8.5) {
-                        killPlayer("CRASHED INTO TERRAIN!");
-                    } else {
-                        this.y = maxY;
-                        this.vy = 0;
-                    }
+                    this.y = maxY;
+                    this.vy = 0;
                 }
 
                 if (mouse.down) this.fireLaser();
@@ -798,7 +787,6 @@
                     ctx.scale(-1, 1);
                 }
 
-                // Sleek Vector Defender Ship
                 ctx.beginPath();
                 ctx.moveTo(22, 0);
                 ctx.lineTo(8, -4);
@@ -815,7 +803,6 @@
                 ctx.closePath();
                 ctx.stroke();
 
-                // Inner Canopy & Fuselage Detail
                 ctx.beginPath();
                 ctx.strokeStyle = '#ffffff';
                 ctx.shadowColor = '#ffffff';
@@ -828,7 +815,6 @@
                 ctx.closePath();
                 ctx.stroke();
 
-                // Side Winglet Accents
                 ctx.beginPath();
                 ctx.strokeStyle = '#ff00ff';
                 ctx.shadowColor = '#ff00ff';
@@ -836,7 +822,6 @@
                 ctx.moveTo(-2, 6); ctx.lineTo(-12, 10);
                 ctx.stroke();
 
-                // Animated Thrust Flame Plume
                 if (this.thrusting || Math.abs(this.vx) > 2) {
                     const thrustLen = 12 + Math.random() * 14;
                     ctx.strokeStyle = '#ff0055';
@@ -1036,18 +1021,13 @@
 
                 if (this.type === 'LANDER') {
                     ctx.beginPath();
-                    // Central Canopy
                     ctx.arc(0, -3, 4, Math.PI, 0);
-                    // Hull Core
                     ctx.moveTo(-6, -3); ctx.lineTo(6, -3);
                     ctx.lineTo(8, 2); ctx.lineTo(-8, 2); ctx.closePath();
-                    // Swept Wings
                     ctx.moveTo(-8, 0); ctx.lineTo(-14, -5); ctx.lineTo(-10, 5); ctx.lineTo(-6, 2);
                     ctx.moveTo(8, 0); ctx.lineTo(14, -5); ctx.lineTo(10, 5); ctx.lineTo(6, 2);
-                    // Rear Thrusters
                     ctx.moveTo(-4, 2); ctx.lineTo(-4, 6);
                     ctx.moveTo(4, 2); ctx.lineTo(4, 6);
-                    // Abduction Tractor Prongs
                     ctx.moveTo(-6, 2); ctx.lineTo(-9, 10); ctx.lineTo(-4, 8);
                     ctx.moveTo(6, 2); ctx.lineTo(9, 10); ctx.lineTo(4, 8);
                     ctx.stroke();
@@ -1067,35 +1047,42 @@
 
                 } else if (this.type === 'MUTANT') {
                     ctx.beginPath();
-                    ctx.moveTo(0, -10);
-                    ctx.lineTo(10, 0);
-                    ctx.lineTo(0, 10);
-                    ctx.lineTo(-10, 0);
-                    ctx.closePath();
+                    ctx.moveTo(12, 0); ctx.lineTo(4, -8); ctx.lineTo(-8, -10);
+                    ctx.lineTo(-4, -3); ctx.lineTo(-12, 0); ctx.lineTo(-4, 3);
+                    ctx.lineTo(-8, 10); ctx.lineTo(4, 8); ctx.closePath();
+                    ctx.moveTo(4, -4); ctx.lineTo(-2, 0); ctx.lineTo(4, 4);
                     ctx.stroke();
+
                 } else if (this.type === 'BAITER') {
                     ctx.beginPath();
-                    ctx.moveTo(-14, 0);
-                    ctx.lineTo(14, -4);
-                    ctx.lineTo(10, 0);
-                    ctx.lineTo(14, 4);
+                    ctx.moveTo(16, 0); ctx.lineTo(2, -5); ctx.lineTo(-10, -8);
+                    ctx.lineTo(-6, 0); ctx.lineTo(-10, 8); ctx.lineTo(2, 5);
                     ctx.closePath();
+                    ctx.moveTo(8, -2); ctx.lineTo(-2, -2); ctx.moveTo(8, 2); ctx.lineTo(-2, 2);
                     ctx.stroke();
+
                 } else if (this.type === 'BOMBER') {
                     ctx.beginPath();
-                    ctx.arc(0, 0, 9, 0, Math.PI * 2);
-                    ctx.moveTo(-9, 0); ctx.lineTo(9, 0);
+                    ctx.moveTo(-10, -8); ctx.lineTo(10, -8); ctx.lineTo(14, 0);
+                    ctx.lineTo(10, 8); ctx.lineTo(-10, 8); ctx.lineTo(-14, 0); ctx.closePath();
+                    ctx.moveTo(-5, -5); ctx.lineTo(5, -5); ctx.lineTo(5, 5); ctx.lineTo(-5, 5); ctx.closePath();
+                    ctx.moveTo(-10, 0); ctx.lineTo(10, 0);
                     ctx.stroke();
+
                 } else if (this.type === 'POD') {
                     ctx.beginPath();
-                    ctx.arc(0, 0, 12, 0, Math.PI * 2);
-                    ctx.strokeRect(-6, -6, 12, 12);
+                    ctx.arc(0, 0, 11, 0, Math.PI * 2);
+                    ctx.moveTo(-6, -6); ctx.lineTo(6, -6); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.closePath();
+                    ctx.moveTo(0, -11); ctx.lineTo(0, 11);
+                    ctx.moveTo(-11, 0); ctx.lineTo(11, 0);
+                    ctx.stroke();
+
                 } else if (this.type === 'SWARMER') {
                     ctx.beginPath();
-                    ctx.moveTo(0, -6);
-                    ctx.lineTo(6, 6);
-                    ctx.lineTo(-6, 6);
-                    ctx.closePath();
+                    ctx.moveTo(8, 0); ctx.lineTo(-4, -6); ctx.lineTo(-2, 0);
+                    ctx.lineTo(-4, 6); ctx.closePath();
+                    ctx.moveTo(0, -3); ctx.lineTo(-8, -8);
+                    ctx.moveTo(0, 3); ctx.lineTo(-8, 8);
                     ctx.stroke();
                 }
 
@@ -1366,26 +1353,13 @@
         function drawTerrain() {
             ctx.save();
 
-            // 0. Parallax Starfield Layer
-            stars.forEach(star => {
-                const sx = ((star.x - cameraX * star.parallax + WORLD_WIDTH * 10) % width);
-                ctx.save();
-                ctx.globalAlpha = star.alpha;
-                ctx.fillStyle = star.color;
-                ctx.shadowBlur = star.size > 1 ? 4 : 0;
-                ctx.shadowColor = star.color;
-                ctx.fillRect(sx, star.y, star.size, star.size);
-                ctx.restore();
-            });
-
-            // 1. Jagged Distant Cyan/Blue Background Mountain Layer (Slower Parallax Factor: 0.2)
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = '#0088cc';
-            ctx.strokeStyle = '#0088cc';
+            // 1. Jagged Distant Magenta Background Mountain Layer (Slower Parallax Factor: 0.2)
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = 'rgba(255, 0, 170, 0.3)';
+            ctx.strokeStyle = 'rgba(255, 0, 170, 0.3)';
             ctx.lineWidth = 1.6;
             ctx.beginPath();
 
-            // Render background layer with fixed world sampling steps to completely eliminate pixel jitter/wiggling
             const bgParallaxFactor = 0.2;
             const bgCameraX = cameraX * bgParallaxFactor;
             const step = TERRAIN_STEP;
@@ -1435,6 +1409,30 @@
             }
             ctx.stroke();
             ctx.restore();
+
+            // 3. Screen-Space Precision Starfield (Strictly Above Mountains)
+            stars.forEach(star => {
+                const sx = ((star.x - cameraX * star.parallax + WORLD_WIDTH * 10) % width);
+                
+                // Calculate exact world X for foreground and background at this screen column
+                const fgWorldX = cameraX + (sx - width / 2);
+                const bgWorldX = (cameraX * 0.2) + (sx - width / 2);
+
+                const fgY = getTerrainY(fgWorldX);
+                const bgY = getBgMountainY(bgWorldX);
+                const skyY = Math.min(fgY, bgY);
+
+                // Strictly drop stars that fall below or on the mountain horizon
+                if (star.y < skyY) {
+                    ctx.save();
+                    ctx.globalAlpha = star.alpha;
+                    ctx.fillStyle = star.color;
+                    ctx.shadowBlur = star.size > 1 ? 4 : 0;
+                    ctx.shadowColor = star.color;
+                    ctx.fillRect(sx, star.y, star.size, star.size);
+                    ctx.restore();
+                }
+            });
         }
 
         function drawHUD() {
