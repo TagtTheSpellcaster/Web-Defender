@@ -802,36 +802,36 @@
                 this.type = type;
                 this.x = x || Math.random() * WORLD_WIDTH;
                 this.y = y || radarHeight + 40 + Math.random() * (height - radarHeight - 160);
-                this.vx = (Math.random() - 0.5) * 2;
+                this.vx = (Math.random() - 0.5) * 3;
                 this.vy = (Math.random() - 0.5) * 2;
                 this.targetHumanoid = null;
-                this.fireTimer = Math.floor(Math.random() * 100);
+                this.fireTimer = Math.floor(Math.random() * 80);
                 this.destroyed = false;
 
                 if (type === 'LANDER') {
                     this.color = '#00ff00';
                     this.score = 150;
-                    this.speed = 1.8;
+                    this.speed = 2.5;
                 } else if (type === 'MUTANT') {
                     this.color = '#ff0000';
                     this.score = 300;
-                    this.speed = 4.2;
+                    this.speed = 4.8;
                 } else if (type === 'BAITER') {
                     this.color = '#ff00ff';
                     this.score = 200;
-                    this.speed = 6.5;
+                    this.speed = 6.8;
                 } else if (type === 'BOMBER') {
                     this.color = '#ffff00';
                     this.score = 250;
-                    this.speed = 1.2;
+                    this.speed = 1.6;
                 } else if (type === 'POD') {
                     this.color = '#ff8800';
                     this.score = 1000;
-                    this.speed = 0.8;
+                    this.speed = 1.0;
                 } else if (type === 'SWARMER') {
                     this.color = '#00ffff';
                     this.score = 150;
-                    this.speed = 5.0;
+                    this.speed = 5.5;
                 }
             }
 
@@ -839,52 +839,75 @@
                 this.fireTimer++;
 
                 if (this.type === 'LANDER') {
+                    // Helper function for shortest distance across wrapping world boundary
+                    const getWrappedDx = (fromX, toX) => {
+                        let dx = toX - fromX;
+                        if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
+                        if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+                        return dx;
+                    };
+
+                    // Find a valid target humanoid on the ground if not already targeting one
                     if (!this.targetHumanoid || this.targetHumanoid.markedForDeletion || this.targetHumanoid.state !== 'GROUND') {
-                        const uncaptured = humanoids.filter(h => !h.markedForDeletion && h.state === 'GROUND');
-                        if (uncaptured.length > 0) {
-                            this.targetHumanoid = uncaptured[Math.floor(Math.random() * uncaptured.length)];
+                        const groundHumanoids = humanoids.filter(h => !h.markedForDeletion && h.state === 'GROUND');
+                        if (groundHumanoids.length > 0) {
+                            // Pick closest ground humanoid taking wrapping world into account
+                            groundHumanoids.sort((a, b) => Math.abs(getWrappedDx(this.x, a.x)) - Math.abs(getWrappedDx(this.x, b.x)));
+                            this.targetHumanoid = groundHumanoids[0];
                         } else {
                             this.targetHumanoid = null;
                         }
                     }
 
                     if (this.targetHumanoid && this.targetHumanoid.state === 'GROUND') {
-                        const dx = this.targetHumanoid.x - this.x;
-                        if (Math.abs(dx) > 10) {
+                        const dx = getWrappedDx(this.x, this.targetHumanoid.x);
+                        if (Math.abs(dx) > 8) {
+                            // Fly horizontally toward humanoid
                             this.vx = Math.sign(dx) * this.speed;
+                            this.vy = (this.targetHumanoid.y - 20 - this.y) * 0.05;
                         } else {
+                            // Hover over and descend directly onto humanoid
                             this.vx = 0;
-                            this.y += 1.2;
-                            if (this.y >= this.targetHumanoid.y - 12) {
+                            this.vy = 2.2;
+                            if (this.y >= this.targetHumanoid.y - 10) {
                                 this.targetHumanoid.state = 'KIDNAPPED';
                                 this.targetHumanoid.kidnapper = this;
                             }
                         }
                     } else if (this.targetHumanoid && this.targetHumanoid.state === 'KIDNAPPED') {
-                        this.vy = -1.2;
-                        this.y += this.vy;
-                        if (this.y <= radarHeight + 20) {
+                        // Ascend with kidnapped humanoid to top edge of screen
+                        this.vx = 0;
+                        this.vy = -1.8;
+                        if (this.y <= radarHeight + 22) {
+                            // Mutate Lander into red Mutant upon reaching top edge
                             this.type = 'MUTANT';
                             this.color = '#ff0000';
-                            this.speed = 4.2;
+                            this.speed = 4.8;
                             if (this.targetHumanoid) {
                                 this.targetHumanoid.destroy();
                                 this.targetHumanoid = null;
                             }
                         }
                     } else {
-                        this.x += this.vx;
-                        this.y += Math.sin(Date.now() * 0.003) * 0.8;
+                        // Active patrol behavior if no humanoids are on the ground
+                        if (Math.abs(this.vx) < 0.5) this.vx = (Math.random() < 0.5 ? 1 : -1) * this.speed;
+                        this.vy = Math.sin(Date.now() * 0.004 + this.x) * 1.5;
                     }
 
-                    if (this.fireTimer > 180 && Math.random() < 0.02) {
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    if (this.fireTimer > 120 && Math.random() < 0.03) {
                         this.fireAtPlayer();
                     }
 
                 } else if (this.type === 'MUTANT' || this.type === 'BAITER') {
-                    const dx = player.x - this.x;
-                    const dy = player.y - this.y;
-                    const dist = Math.hypot(dx, dy) || 1;
+                    let dx = player.x - this.x;
+                    if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
+                    if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+                    let dy = player.y - this.y;
+                    let dist = Math.hypot(dx, dy) || 1;
+
                     this.vx = (dx / dist) * this.speed;
                     this.vy = (dy / dist) * this.speed;
 
@@ -916,8 +939,11 @@
                     this.y += this.vy;
 
                 } else if (this.type === 'SWARMER') {
-                    const dx = player.x - this.x;
-                    const dy = player.y - this.y;
+                    let dx = player.x - this.x;
+                    if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
+                    if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+                    let dy = player.y - this.y;
+
                     this.x += Math.sign(dx) * (this.speed + Math.random() * 2);
                     this.y += Math.sign(dy) * (this.speed + Math.random() * 2);
 
@@ -934,10 +960,13 @@
 
             fireAtPlayer() {
                 this.fireTimer = 0;
-                const dx = player.x - this.x;
-                const dy = player.y - this.y;
-                const dist = Math.hypot(dx, dy) || 1;
-                const spd = 6;
+                let dx = player.x - this.x;
+                if (dx > WORLD_WIDTH / 2) dx -= WORLD_WIDTH;
+                if (dx < -WORLD_WIDTH / 2) dx += WORLD_WIDTH;
+                let dy = player.y - this.y;
+                let dist = Math.hypot(dx, dy) || 1;
+                let spd = 6;
+
                 enemyLasers.push({
                     x: this.x,
                     y: this.y,
