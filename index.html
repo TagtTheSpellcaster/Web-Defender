@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>DEFENDER 1981 - Vector Edition</title>
+    <title>WEB DEFENDER - Vector Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -131,14 +131,14 @@
             z-index: 5;
         }
 
-        /* Mobile Touch Controls Layer */
+        /* Mobile Touch Controls Layer - Hidden by default on Desktop */
         #touch-controls {
             position: absolute;
             bottom: 10px;
             left: 0;
             width: 100%;
             height: 180px;
-            display: flex;
+            display: none; /* Controlled dynamically by JS device detection */
             justify-content: space-between;
             align-items: flex-end;
             padding: 0 12px;
@@ -225,8 +225,8 @@
 
         <!-- Start Screen -->
         <div id="start-screen" class="overlay">
-            <h1>DEFENDER</h1>
-            <h2>VECTOR 1981 ARCADE</h2>
+            <h1>WEB DEFENDER</h1>
+            <h2>VECTOR ARCADE</h2>
             <div class="controls-box">
                 <p style="text-align:center; font-weight:bold; color:#ff00ff; margin-bottom:8px;">MISSION: PROTECT AND RESCUE THE HUMANOIDS</p>
                 <div class="controls-grid">
@@ -1643,7 +1643,24 @@
             requestAnimationFrame(gameLoop);
         }
 
+        // Detect if user is playing on a smartphone/tablet device
+        function detectMobileDevice() {
+            const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            const isSmallScreen = window.innerWidth <= 1024;
+            const touchControlsElem = document.getElementById('touch-controls');
+
+            if (touchControlsElem) {
+                if (hasTouch && isSmallScreen) {
+                    touchControlsElem.style.display = 'flex';
+                } else {
+                    touchControlsElem.style.display = 'none';
+                }
+            }
+        }
+
         window.onload = function() {
+            detectMobileDevice();
+            window.addEventListener('resize', detectMobileDevice);
             gameLoop();
         };
     </script>
