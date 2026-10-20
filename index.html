@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>WEB DEFENDER - Vector Edition</title>
+    <title>DEFENDER 1981 - Vector Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -226,8 +226,8 @@
 
         <!-- Start Screen -->
         <div id="start-screen" class="overlay">
-            <h1>WEB DEFENDER</h1>
-            <h2>VECTOR ARCADE</h2>
+            <h1>DEFENDER</h1>
+            <h2>VECTOR 1981 ARCADE</h2>
             <div class="controls-box">
                 <p style="text-align:center; font-weight:bold; color:#ff00ff; margin-bottom:8px;">MISSION: PROTECT AND RESCUE THE HUMANOIDS</p>
                 <div class="controls-grid">
@@ -558,14 +558,23 @@
         function getBgMountainY(worldX) {
             let wx = (worldX % WORLD_WIDTH + WORLD_WIDTH) % WORLD_WIDTH;
             
-            const tri1 = Math.abs((wx % 240) - 120) * 0.22;
-            const tri2 = Math.abs((wx % 90) - 45) * 0.28;
-            const tri3 = Math.abs((wx % 450) - 225) * 0.12;
-            const spike = Math.abs(Math.sin(wx * 0.008)) * 10;
+            // Sharp jagged peaks profile using triangular and high-frequency harmonics
+            const tri1 = Math.abs((wx % 240) - 120) * 0.45;
+            const tri2 = Math.abs((wx % 90) - 45) * 0.55;
+            const tri3 = Math.abs((wx % 450) - 225) * 0.35;
+            const spike = Math.abs(Math.sin(wx * 0.008)) * 25;
 
             const totalPeak = tri1 + tri2 + tri3 + spike;
+            
+            // On Canvas, SMALLER Y = HIGHER on screen.
+            // Foreground highest peak is at (getGroundBaseY() - 180).
+            // We set background lowest point (max Y) at (getGroundBaseY() - 210) so it's always HIGHER on screen than foreground.
+            const lowestBgY = getGroundBaseY() - 210;
+            const calculatedY = lowestBgY - totalPeak;
+            
+            // Minimum Y (highest point on screen) is capped at radarHeight + 14 (at least 14px below top minimap)
             const minY = radarHeight + 14;
-            const calculatedY = getGroundBaseY() - 70 - totalPeak;
+            
             return Math.max(minY, calculatedY);
         }
 
