@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>DEFENDER 1981 - Vector Edition</title>
     <style>
         * {
@@ -11,6 +11,7 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
+            touch-action: none;
         }
         html, body {
             width: 100vw;
@@ -34,7 +35,6 @@
             width: 100vw;
             height: 100vh;
             background-color: #000000;
-            cursor: crosshair;
         }
         .overlay {
             position: absolute;
@@ -47,7 +47,7 @@
             justify-content: center;
             align-items: center;
             background: rgba(2, 2, 10, 0.88);
-            z-index: 10;
+            z-index: 20;
             pointer-events: auto;
             text-align: center;
             backdrop-filter: blur(4px);
@@ -57,7 +57,7 @@
             display: none !important;
         }
         h1 {
-            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-size: clamp(1.8rem, 4.5vw, 3.2rem);
             color: #00ffff;
             text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 40px #0088ff;
             letter-spacing: 4px;
@@ -65,13 +65,13 @@
             font-weight: 900;
         }
         h2 {
-            font-size: clamp(1rem, 2.2vw, 1.6rem);
+            font-size: clamp(0.9rem, 2vw, 1.6rem);
             color: #ff00ff;
             text-shadow: 0 0 10px #ff00ff;
             margin-bottom: 12px;
         }
         p {
-            font-size: clamp(0.8rem, 1.4vw, 1rem);
+            font-size: clamp(0.75rem, 1.3vw, 1rem);
             color: #00ffaa;
             margin: 3px 0;
             text-shadow: 0 0 5px #00ffaa;
@@ -91,7 +91,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 6px 12px;
-            font-size: clamp(0.7rem, 1.1vw, 0.9rem);
+            font-size: clamp(0.65rem, 1vw, 0.9rem);
         }
         .key {
             color: #ffff00;
@@ -99,7 +99,7 @@
         }
         .btn {
             margin-top: 12px;
-            padding: 8px 24px;
+            padding: 10px 24px;
             font-size: clamp(0.9rem, 1.8vw, 1.2rem);
             font-family: inherit;
             font-weight: bold;
@@ -128,6 +128,75 @@
             letter-spacing: 1px;
             text-shadow: 0 0 5px #ff00ff;
             pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Mobile Touch Controls Layer */
+        #touch-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 12px;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        .touch-group {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .touch-dpad {
+            display: grid;
+            grid-template-columns: 50px 50px 50px;
+            grid-template-rows: 50px 50px;
+            gap: 6px;
+            pointer-events: auto;
+        }
+
+        .touch-btn {
+            background: rgba(0, 255, 255, 0.15);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            font-weight: bold;
+            font-size: 0.85rem;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        .touch-btn:active, .touch-btn.active {
+            background: rgba(0, 255, 255, 0.6);
+            box-shadow: 0 0 18px #00ffff;
+            transform: scale(0.92);
+        }
+
+        .touch-btn-action {
+            width: 58px;
+            height: 58px;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-fire { border-color: #00ffff; color: #00ffff; box-shadow: 0 0 10px #00ffff; }
+        .btn-bomb { border-color: #ffff00; color: #ffff00; box-shadow: 0 0 10px #ffff00; background: rgba(255, 255, 0, 0.15); }
+        .btn-warp { border-color: #ff00ff; color: #ff00ff; box-shadow: 0 0 10px #ff00ff; background: rgba(255, 0, 255, 0.15); }
+
+        @media (min-width: 1025px) {
+            #touch-controls {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -135,6 +204,24 @@
 
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
+
+        <!-- Touch Controls for Mobile/Tablet -->
+        <div id="touch-controls">
+            <div class="touch-dpad">
+                <div></div>
+                <div class="touch-btn" id="t-up" style="grid-column: 2; grid-row: 1;">▲</div>
+                <div></div>
+                <div class="touch-btn" id="t-left" style="grid-column: 1; grid-row: 2;">◄</div>
+                <div class="touch-btn" id="t-down" style="grid-column: 2; grid-row: 2;">▼</div>
+                <div class="touch-btn" id="t-right" style="grid-column: 3; grid-row: 2;">►</div>
+            </div>
+
+            <div class="touch-group">
+                <div class="touch-btn touch-btn-action btn-warp" id="t-warp">WARP</div>
+                <div class="touch-btn touch-btn-action btn-bomb" id="t-bomb">BOMB</div>
+                <div class="touch-btn touch-btn-action btn-fire" id="t-fire">FIRE</div>
+            </div>
+        </div>
 
         <!-- Start Screen -->
         <div id="start-screen" class="overlay">
@@ -148,17 +235,17 @@
                     <div><span class="key">A, D / Arrows</span> : Thrust & Direction</div>
                     <div><span class="key">E / R-Click</span> : Smart Bomb</div>
                     <div><span class="key">Shift / Mid-Click</span> : Hyperspace Warp</div>
-                    <div><span class="key">ESC</span> : Pause / Unlock Mouse</div>
+                    <div><span class="key">Touch Controls</span> : Smartphone Buttons</div>
                 </div>
             </div>
-            <p>Click screen to enable Pointer Lock & Audio</p>
+            <p>Click screen or tap Start to launch mission</p>
             <button class="btn" id="start-btn">START MISSION</button>
         </div>
 
         <!-- Pause Screen -->
         <div id="pause-screen" class="overlay hidden">
             <h1>PAUSED</h1>
-            <p>Pointer Unlocked</p>
+            <p>Game Suspended</p>
             <button class="btn" id="resume-btn">RESUME GAME</button>
         </div>
 
@@ -170,7 +257,7 @@
             <button class="btn" id="restart-btn">PLAY AGAIN</button>
         </div>
 
-        <div class="hud-hint">PRESS ESC TO PAUSE / UNLOCK CURSOR</div>
+        <div class="hud-hint">PRESS ESC TO PAUSE</div>
     </div>
 
     <script>
@@ -343,18 +430,54 @@
         let gameState = STATES.START;
 
         const keys = {};
-        const mouse = { x: 0, y: 0, isLocked: false, down: false };
+        const mouse = { x: 0, y: 0, down: false };
 
-        function requestLock() {
-            if (canvas && typeof canvas.requestPointerLock === 'function') {
-                try {
-                    const lockPromise = canvas.requestPointerLock();
-                    if (lockPromise && typeof lockPromise.catch === 'function') {
-                        lockPromise.catch(() => {});
-                    }
-                } catch (err) {}
-            }
+        const touchState = { up: false, down: false, left: false, right: false };
+
+        function bindTouchButton(id, stateKey) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            
+            const startHandler = (e) => {
+                e.preventDefault();
+                sfx.init();
+                touchState[stateKey] = true;
+                btn.classList.add('active');
+            };
+            const endHandler = (e) => {
+                e.preventDefault();
+                touchState[stateKey] = false;
+                btn.classList.remove('active');
+            };
+
+            btn.addEventListener('touchstart', startHandler, { passive: false });
+            btn.addEventListener('touchend', endHandler, { passive: false });
+            btn.addEventListener('touchcancel', endHandler, { passive: false });
         }
+
+        bindTouchButton('t-up', 'up');
+        bindTouchButton('t-down', 'down');
+        bindTouchButton('t-left', 'left');
+        bindTouchButton('t-right', 'right');
+
+        function bindActionTouch(id, actionFn) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            const handler = (e) => {
+                e.preventDefault();
+                sfx.init();
+                btn.classList.add('active');
+                if (gameState === STATES.PLAYING) actionFn();
+                setTimeout(() => btn.classList.remove('active'), 150);
+            };
+
+            btn.addEventListener('touchstart', handler, { passive: false });
+        }
+
+        bindActionTouch('t-fire', () => player.fireLaser());
+        bindActionTouch('t-bomb', () => triggerSmartBomb());
+        bindActionTouch('t-warp', () => triggerHyperspace());
 
         window.addEventListener('keydown', (e) => {
             sfx.init();
@@ -373,13 +496,8 @@
         window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
         canvas.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === canvas) {
-                if (e.movementX > 4) player.facing = 1;
-                else if (e.movementX < -4) player.facing = -1;
-            } else {
-                mouse.x = e.clientX;
-                mouse.y = e.clientY;
-            }
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
         });
 
         canvas.addEventListener('mousedown', (e) => {
@@ -403,15 +521,6 @@
         });
 
         window.addEventListener('contextmenu', e => e.preventDefault());
-
-        document.addEventListener('pointerlockchange', () => {
-            if (document.pointerLockElement === canvas) {
-                mouse.isLocked = true;
-            } else {
-                mouse.isLocked = false;
-                if (gameState === STATES.PLAYING) pauseGame();
-            }
-        });
 
         let terrainHeights = [];
 
@@ -448,14 +557,14 @@
         function getBgMountainY(worldX) {
             let wx = (worldX % WORLD_WIDTH + WORLD_WIDTH) % WORLD_WIDTH;
             
-            const tri1 = Math.abs((wx % 240) - 120) * 0.85;
-            const tri2 = Math.abs((wx % 90) - 45) * 1.1;
-            const tri3 = Math.abs((wx % 450) - 225) * 0.45;
-            const spike = Math.abs(Math.sin(wx * 0.008)) * 40;
+            const tri1 = Math.abs((wx % 240) - 120) * 0.42;
+            const tri2 = Math.abs((wx % 90) - 45) * 0.55;
+            const tri3 = Math.abs((wx % 450) - 225) * 0.22;
+            const spike = Math.abs(Math.sin(wx * 0.008)) * 18;
 
             const totalPeak = tri1 + tri2 + tri3 + spike;
-            const minY = radarHeight + 12;
-            const calculatedY = getGroundBaseY() - 120 - totalPeak;
+            const minY = radarHeight + 14;
+            const calculatedY = getGroundBaseY() - 110 - totalPeak;
             return Math.max(minY, calculatedY);
         }
 
@@ -709,18 +818,18 @@
                 }
 
                 let yInput = 0;
-                if (keys['KeyW'] || keys['ArrowUp']) yInput -= 1;
-                if (keys['KeyS'] || keys['ArrowDown']) yInput += 1;
+                if (keys['KeyW'] || keys['ArrowUp'] || touchState.up) yInput -= 1;
+                if (keys['KeyS'] || keys['ArrowDown'] || touchState.down) yInput += 1;
 
                 if (yInput !== 0) this.vy += yInput * accelY;
 
                 this.thrusting = false;
-                if (keys['KeyD'] || keys['ArrowRight']) {
+                if (keys['KeyD'] || keys['ArrowRight'] || touchState.right) {
                     this.vx += accelX;
                     this.facing = 1;
                     this.thrusting = true;
                 }
-                if (keys['KeyA'] || keys['ArrowLeft']) {
+                if (keys['KeyA'] || keys['ArrowLeft'] || touchState.left) {
                     this.vx -= accelX;
                     this.facing = -1;
                     this.thrusting = true;
@@ -1185,7 +1294,6 @@
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('pause-screen').classList.add('hidden');
             document.getElementById('game-over-screen').classList.add('hidden');
-            requestLock();
         }
 
         function pauseGame() {
@@ -1199,7 +1307,6 @@
             if (gameState === STATES.PAUSED) {
                 gameState = STATES.PLAYING;
                 document.getElementById('pause-screen').classList.add('hidden');
-                requestLock();
             }
         }
 
@@ -1212,9 +1319,6 @@
             document.getElementById('final-score').innerText = `FINAL SCORE: ${score}`;
             document.getElementById('final-wave').innerText = `WAVES COMPLETED: ${wave - 1}`;
             document.getElementById('game-over-screen').classList.remove('hidden');
-            if (document.exitPointerLock) {
-                document.exitPointerLock();
-            }
         }
 
         document.getElementById('start-btn').addEventListener('click', startGame);
@@ -1353,15 +1457,14 @@
         function drawTerrain() {
             ctx.save();
 
-            // 1. Jagged Distant Magenta Background Mountain Layer (Slower Parallax Factor: 0.2)
+            // 1. Jagged Distant Magenta Background Mountain Layer (30% Brightness, Smooth Parallax 0.2)
             ctx.shadowBlur = 4;
             ctx.shadowColor = 'rgba(255, 0, 170, 0.3)';
             ctx.strokeStyle = 'rgba(255, 0, 170, 0.3)';
             ctx.lineWidth = 1.6;
             ctx.beginPath();
 
-            const bgParallaxFactor = 0.2;
-            const bgCameraX = cameraX * bgParallaxFactor;
+            const bgCameraX = cameraX * 0.2;
             const step = TERRAIN_STEP;
             const startI = Math.floor((bgCameraX - width / 2 - 200) / step);
             const endI = Math.ceil((bgCameraX + width / 2 + 200) / step);
@@ -1410,11 +1513,10 @@
             ctx.stroke();
             ctx.restore();
 
-            // 3. Screen-Space Precision Starfield (Strictly Above Mountains)
+            // 3. Screen-Space Precision Leak-Proof Starfield Rendering
             stars.forEach(star => {
                 const sx = ((star.x - cameraX * star.parallax + WORLD_WIDTH * 10) % width);
                 
-                // Calculate exact world X for foreground and background at this screen column
                 const fgWorldX = cameraX + (sx - width / 2);
                 const bgWorldX = (cameraX * 0.2) + (sx - width / 2);
 
@@ -1422,7 +1524,6 @@
                 const bgY = getBgMountainY(bgWorldX);
                 const skyY = Math.min(fgY, bgY);
 
-                // Strictly drop stars that fall below or on the mountain horizon
                 if (star.y < skyY) {
                     ctx.save();
                     ctx.globalAlpha = star.alpha;
