@@ -35,6 +35,7 @@
             width: 100vw;
             height: 100vh;
             background-color: #000000;
+            cursor: crosshair;
         }
         .overlay {
             position: absolute;
@@ -557,14 +558,14 @@
         function getBgMountainY(worldX) {
             let wx = (worldX % WORLD_WIDTH + WORLD_WIDTH) % WORLD_WIDTH;
             
-            const tri1 = Math.abs((wx % 240) - 120) * 0.42;
-            const tri2 = Math.abs((wx % 90) - 45) * 0.55;
-            const tri3 = Math.abs((wx % 450) - 225) * 0.22;
-            const spike = Math.abs(Math.sin(wx * 0.008)) * 18;
+            const tri1 = Math.abs((wx % 240) - 120) * 0.22;
+            const tri2 = Math.abs((wx % 90) - 45) * 0.28;
+            const tri3 = Math.abs((wx % 450) - 225) * 0.12;
+            const spike = Math.abs(Math.sin(wx * 0.008)) * 10;
 
             const totalPeak = tri1 + tri2 + tri3 + spike;
             const minY = radarHeight + 14;
-            const calculatedY = getGroundBaseY() - 110 - totalPeak;
+            const calculatedY = getGroundBaseY() - 70 - totalPeak;
             return Math.max(minY, calculatedY);
         }
 
